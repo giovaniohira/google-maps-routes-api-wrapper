@@ -4,6 +4,7 @@ import { validateGetRouteOptions } from '../validation';
 import { RoutesError } from '../errors';
 import { RetryStrategy, RetryConfig } from './retryStrategy';
 import { RateLimiter, RateLimiterConfig } from './rateLimiter';
+import { CacheAdapter, CacheConfig } from '../adapters/cache/cacheAdapter';
 
 export class RoutesClient {
     private httpAdapter: HttpAdapter;
@@ -12,6 +13,7 @@ export class RoutesClient {
     private baseUrl: string;
     private retryStrategy: RetryStrategy;
     private rateLimiter: RateLimiter;
+    private cacheAdapter?: CacheAdapter;
 
     constructor(opts: {
         apiKey: string;
@@ -20,6 +22,7 @@ export class RoutesClient {
         baseUrl?: string;
         retryConfig?: Partial<RetryConfig>;
         rateLimiterConfig?: Partial<RateLimiterConfig>;
+        cacheAdapter?: CacheAdapter;
     }) {
         if (!opts.apiKey) {
             throw RoutesError.validation('API key is required', 'apiKey');
@@ -36,17 +39,33 @@ export class RoutesClient {
         // Initialize retry strategy and rate limiter
         this.retryStrategy = new RetryStrategy(opts.retryConfig);
         this.rateLimiter = new RateLimiter(opts.rateLimiterConfig);
+        this.cacheAdapter = opts.cacheAdapter;
     }
 
     /**
      * Get route between origin and destination
      * @param opts - Route options including origin, destination, and optional parameters
+     * @param cacheOptions - Cache options for this request
      * @returns Promise<RouteResult> - The route result from Google Maps API
      * @throws RoutesError - For validation errors, API errors, or network issues
      */
-    async getRoute(opts: GetRouteOptions): Promise<RouteResult> {
+    async getRoute(
+        opts: GetRouteOptions, 
+        cacheOptions?: { bypassCache?: boolean; forceRefresh?: boolean; ttlMs?: number }
+    ): Promise<RouteResult> {
         // Validate input options
         const validatedOptions = validateGetRouteOptions(opts);
+        
+        // Generate cache key
+        const cacheKey = this.generateCacheKey('route', validatedOptions);
+        
+        // Check cache first (unless bypassing)
+        if (this.cacheAdapter && !cacheOptions?.bypassCache && !cacheOptions?.forceRefresh) {
+            const cachedResult = await this.cacheAdapter.get<RouteResult>(cacheKey);
+            if (cachedResult) {
+                return cachedResult;
+            }
+        }
         
         // Apply rate limiting
         const rateLimited = await this.rateLimiter.acquire();
@@ -55,9 +74,17 @@ export class RoutesClient {
         }
 
         // Execute with retry strategy
-        return this.retryStrategy.execute(async () => {
+        const result = await this.retryStrategy.execute(async () => {
             return this.executeRouteRequest(validatedOptions);
         }, { operation: 'getRoute' });
+
+        // Cache the result
+        if (this.cacheAdapter && result) {
+            const ttlMs = cacheOptions?.ttlMs || 300000; // 5 minutes default
+            await this.cacheAdapter.set(cacheKey, result, ttlMs);
+        }
+
+        return result;
     }
 
     /**
@@ -239,10 +266,75 @@ export class RoutesClient {
     }
 
     /**
+     * Generate cache key for request
+     */
+    private generateCacheKey(operation: string, options: GetRouteOptions): string {
+        const keyData = {
+            operation,
+            origin: options.origin,
+            destination: options.destination,
+            travelMode: options.travelMode,
+            waypoints: options.waypoints,
+            avoidHighways: options.avoidHighways,
+            avoidTolls: options.avoidTolls,
+            avoidFerries: options.avoidFerries,
+            optimizeWaypoints: options.optimizeWaypoints
+        };
+        
+        return `routes:${operation}:${Buffer.from(JSON.stringify(keyData)).toString('base64')}`;
+    }
+
+    /**
+     * Get cache adapter
+     */
+    getCacheAdapter(): CacheAdapter | undefined {
+        return this.cacheAdapter;
+    }
+
+    /**
+     * Set cache adapter
+     */
+    setCacheAdapter(cacheAdapter: CacheAdapter): void {
+        this.cacheAdapter = cacheAdapter;
+    }
+
+    /**
+     * Clear cache
+     */
+    async clearCache(): Promise<void> {
+        if (this.cacheAdapter) {
+            await this.cacheAdapter.clear();
+        }
+    }
+
+    /**
+     * Get cache statistics
+     */
+    async getCacheStats(): Promise<any> {
+        if (this.cacheAdapter) {
+            return await this.cacheAdapter.getStats();
+        }
+        return null;
+    }
+
+    /**
+     * Invalidate cache for specific route
+     */
+    async invalidateRoute(opts: GetRouteOptions): Promise<void> {
+        if (this.cacheAdapter) {
+            const cacheKey = this.generateCacheKey('route', opts);
+            await this.cacheAdapter.del(cacheKey);
+        }
+    }
+
+    /**
      * Destroy the client and clean up resources
      */
     destroy(): void {
         this.rateLimiter.destroy();
+        if (this.cacheAdapter && 'destroy' in this.cacheAdapter) {
+            (this.cacheAdapter as any).destroy();
+        }
     }
 }
 

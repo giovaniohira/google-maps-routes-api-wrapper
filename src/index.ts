@@ -17,3 +17,7 @@ export * from './validation';
 // Retry and Rate Limiting
 export { RetryStrategy, RetryConfig, DEFAULT_RETRY_CONFIG } from './core/retryStrategy';
 export { RateLimiter, RateLimiterConfig, DEFAULT_RATE_LIMITER_CONFIG, MultiRateLimiter } from './core/rateLimiter';
+
+// Cache Adapters
+export { CacheAdapter, CacheEntry, CacheStats, CacheConfig } from './adapters/cache/cacheAdapter';
+export { InMemoryCacheAdapter, DEFAULT_CACHE_CONFIG } from './adapters/cache/inMemoryCacheAdapter';
