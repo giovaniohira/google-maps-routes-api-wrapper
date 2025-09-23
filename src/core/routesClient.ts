@@ -2,18 +2,24 @@ import { HttpAdapter, HttpRequest, HttpResponse } from '../adapters/http/httpAda
 import { GetRouteOptions, RouteResult, LatLng } from '../types';
 import { validateGetRouteOptions } from '../validation';
 import { RoutesError } from '../errors';
+import { RetryStrategy, RetryConfig } from './retryStrategy';
+import { RateLimiter, RateLimiterConfig } from './rateLimiter';
 
 export class RoutesClient {
     private httpAdapter: HttpAdapter;
     private apiKey: string;
     private timeoutMs: number;
     private baseUrl: string;
+    private retryStrategy: RetryStrategy;
+    private rateLimiter: RateLimiter;
 
     constructor(opts: {
         apiKey: string;
         httpAdapter: HttpAdapter;
         timeoutMs?: number;
         baseUrl?: string;
+        retryConfig?: Partial<RetryConfig>;
+        rateLimiterConfig?: Partial<RateLimiterConfig>;
     }) {
         if (!opts.apiKey) {
             throw RoutesError.validation('API key is required', 'apiKey');
@@ -26,6 +32,10 @@ export class RoutesClient {
         this.apiKey = opts.apiKey;
         this.timeoutMs = opts.timeoutMs || 30000; // 30 seconds default
         this.baseUrl = opts.baseUrl || 'https://maps.googleapis.com/maps/api';
+        
+        // Initialize retry strategy and rate limiter
+        this.retryStrategy = new RetryStrategy(opts.retryConfig);
+        this.rateLimiter = new RateLimiter(opts.rateLimiterConfig);
     }
 
     /**
@@ -35,12 +45,28 @@ export class RoutesClient {
      * @throws RoutesError - For validation errors, API errors, or network issues
      */
     async getRoute(opts: GetRouteOptions): Promise<RouteResult> {
+        // Validate input options
+        const validatedOptions = validateGetRouteOptions(opts);
+        
+        // Apply rate limiting
+        const rateLimited = await this.rateLimiter.acquire();
+        if (!rateLimited) {
+            throw RoutesError.fromHttpResponse(429, 'Rate limit exceeded. Please try again later.');
+        }
+
+        // Execute with retry strategy
+        return this.retryStrategy.execute(async () => {
+            return this.executeRouteRequest(validatedOptions);
+        }, { operation: 'getRoute' });
+    }
+
+    /**
+     * Execute the actual route request
+     */
+    private async executeRouteRequest(opts: GetRouteOptions): Promise<RouteResult> {
         try {
-            // Validate input options
-            const validatedOptions = validateGetRouteOptions(opts);
-            
             // Build request URL
-            const url = this.buildDirectionsUrl(validatedOptions);
+            const url = this.buildDirectionsUrl(opts);
             
             // Create HTTP request
             const req: HttpRequest = {
@@ -168,6 +194,55 @@ export class RoutesClient {
         }
 
         return body as RouteResult;
+    }
+
+    /**
+     * Get current retry configuration
+     */
+    getRetryConfig(): RetryConfig {
+        return this.retryStrategy.getConfig();
+    }
+
+    /**
+     * Update retry configuration
+     */
+    updateRetryConfig(config: Partial<RetryConfig>): void {
+        this.retryStrategy.updateConfig(config);
+    }
+
+    /**
+     * Get current rate limiter configuration
+     */
+    getRateLimiterConfig(): RateLimiterConfig {
+        return this.rateLimiter.getConfig();
+    }
+
+    /**
+     * Update rate limiter configuration
+     */
+    updateRateLimiterConfig(config: Partial<RateLimiterConfig>): void {
+        this.rateLimiter.updateConfig(config);
+    }
+
+    /**
+     * Get current token count from rate limiter
+     */
+    getTokenCount(): number {
+        return this.rateLimiter.getTokenCount();
+    }
+
+    /**
+     * Reset rate limiter to full capacity
+     */
+    resetRateLimiter(): void {
+        this.rateLimiter.reset();
+    }
+
+    /**
+     * Destroy the client and clean up resources
+     */
+    destroy(): void {
+        this.rateLimiter.destroy();
     }
 }
 
