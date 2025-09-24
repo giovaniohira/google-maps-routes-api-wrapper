@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LatLng, TravelMode, GetRouteOptions, DistanceMatrixOptions, SnapToRoadsOptions } from '../types';
+import { LatLng, TravelMode, GetRouteOptions, DistanceMatrixOptions, SnapToRoadsOptions, Waypoint, Location } from '../types';
 
 /**
  * Schema for LatLng coordinates
@@ -15,12 +15,21 @@ export const latLngSchema = z.object({
 export const travelModeSchema = z.nativeEnum(TravelMode);
 
 /**
- * Schema for origin/destination (string or LatLng)
+ * Schema for location (string, LatLng, or [lat, lng] array)
  */
 export const locationSchema = z.union([
   z.string().min(1, 'Location string cannot be empty'),
-  latLngSchema
+  latLngSchema,
+  z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)])
+    .refine(([lat, lng]) => {
+      return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+    }, 'Invalid coordinates: latitude must be between -90 and 90, longitude between -180 and 180')
 ]);
+
+/**
+ * Schema for waypoint (string, LatLng, or [lat, lng] array)
+ */
+export const waypointSchema = locationSchema;
 
 /**
  * Schema for GetRouteOptions
@@ -29,7 +38,7 @@ export const getRouteOptionsSchema = z.object({
   origin: locationSchema,
   destination: locationSchema,
   travelMode: travelModeSchema.optional(),
-  waypoints: z.array(locationSchema).optional(),
+  waypoints: z.array(waypointSchema).optional(),
   avoidHighways: z.boolean().optional(),
   avoidTolls: z.boolean().optional(),
   avoidFerries: z.boolean().optional(),

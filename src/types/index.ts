@@ -17,13 +17,23 @@ export enum TravelMode {
 }
 
 /**
+ * Location can be a string, LatLng object, or array of [lat, lng] numbers
+ */
+export type Location = string | LatLng | [number, number];
+
+/**
+ * Waypoint can be a string, LatLng object, or array of [lat, lng] numbers
+ */
+export type Waypoint = Location;
+
+/**
  * Options for getting a route
  */
 export interface GetRouteOptions {
-  origin: string | LatLng;
-  destination: string | LatLng;
+  origin: Location;
+  destination: Location;
   travelMode?: TravelMode;
-  waypoints?: (string | LatLng)[];
+  waypoints?: Waypoint[];
   avoidHighways?: boolean;
   avoidTolls?: boolean;
   avoidFerries?: boolean;
@@ -96,8 +106,8 @@ export interface RouteResult {
  * Distance Matrix request options
  */
 export interface DistanceMatrixOptions {
-  origins: (string | LatLng)[];
-  destinations: (string | LatLng)[];
+  origins: Location[];
+  destinations: Location[];
   travelMode?: TravelMode;
   avoidHighways?: boolean;
   avoidTolls?: boolean;
