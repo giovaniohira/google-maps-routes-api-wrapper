@@ -91,3 +91,89 @@ export interface RouteResult {
   status: string;
   errorMessage?: string;
 }
+
+/**
+ * Distance Matrix request options
+ */
+export interface DistanceMatrixOptions {
+  origins: (string | LatLng)[];
+  destinations: (string | LatLng)[];
+  travelMode?: TravelMode;
+  avoidHighways?: boolean;
+  avoidTolls?: boolean;
+  avoidFerries?: boolean;
+  units?: 'metric' | 'imperial';
+  departureTime?: Date | number; // Date object or Unix timestamp
+  arrivalTime?: Date | number; // Date object or Unix timestamp
+  trafficModel?: 'best_guess' | 'pessimistic' | 'optimistic';
+  transitMode?: 'bus' | 'subway' | 'train' | 'tram' | 'rail';
+  transitRoutingPreference?: 'less_walking' | 'fewer_transfers';
+}
+
+/**
+ * Distance Matrix element result
+ */
+export interface DistanceMatrixElement {
+  status: string;
+  duration?: {
+    text: string;
+    value: number; // in seconds
+  };
+  distance?: {
+    text: string;
+    value: number; // in meters
+  };
+  duration_in_traffic?: {
+    text: string;
+    value: number; // in seconds
+  };
+  fare?: {
+    text: string;
+    value: number;
+    currency: string;
+  };
+}
+
+/**
+ * Distance Matrix row result
+ */
+export interface DistanceMatrixRow {
+  elements: DistanceMatrixElement[];
+}
+
+/**
+ * Distance Matrix result
+ */
+export interface DistanceMatrixResult {
+  originAddresses: string[];
+  destinationAddresses: string[];
+  rows: DistanceMatrixRow[];
+  status: string;
+  errorMessage?: string;
+}
+
+/**
+ * Snap to Roads request options
+ */
+export interface SnapToRoadsOptions {
+  path: LatLng[];
+  interpolate?: boolean;
+}
+
+/**
+ * Snapped point result
+ */
+export interface SnappedPoint {
+  location: LatLng;
+  originalIndex?: number;
+  placeId?: string;
+}
+
+/**
+ * Snap to Roads result
+ */
+export interface SnapToRoadsResult {
+  snappedPoints: SnappedPoint[];
+  status: string;
+  errorMessage?: string;
+}

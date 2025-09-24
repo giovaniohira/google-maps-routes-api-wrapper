@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LatLng, TravelMode, GetRouteOptions } from '../types';
+import { LatLng, TravelMode, GetRouteOptions, DistanceMatrixOptions, SnapToRoadsOptions } from '../types';
 
 /**
  * Schema for LatLng coordinates
@@ -75,6 +75,62 @@ export function validateTravelMode(mode: unknown): TravelMode {
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new Error(`Invalid travel mode: ${mode}. Must be one of: ${Object.values(TravelMode).join(', ')}`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Schema for DistanceMatrixOptions
+ */
+export const distanceMatrixOptionsSchema = z.object({
+  origins: z.array(locationSchema).min(1, 'At least one origin is required').max(25, 'Maximum 25 origins allowed'),
+  destinations: z.array(locationSchema).min(1, 'At least one destination is required').max(25, 'Maximum 25 destinations allowed'),
+  travelMode: travelModeSchema.optional(),
+  avoidHighways: z.boolean().optional(),
+  avoidTolls: z.boolean().optional(),
+  avoidFerries: z.boolean().optional(),
+  units: z.enum(['metric', 'imperial']).optional(),
+  departureTime: z.union([z.date(), z.number()]).optional(),
+  arrivalTime: z.union([z.date(), z.number()]).optional(),
+  trafficModel: z.enum(['best_guess', 'pessimistic', 'optimistic']).optional(),
+  transitMode: z.enum(['bus', 'subway', 'train', 'tram', 'rail']).optional(),
+  transitRoutingPreference: z.enum(['less_walking', 'fewer_transfers']).optional()
+});
+
+/**
+ * Schema for SnapToRoadsOptions
+ */
+export const snapToRoadsOptionsSchema = z.object({
+  path: z.array(latLngSchema).min(2, 'At least 2 points required for path').max(100, 'Maximum 100 points allowed'),
+  interpolate: z.boolean().optional()
+});
+
+/**
+ * Validate DistanceMatrixOptions
+ */
+export function validateDistanceMatrixOptions(options: unknown): DistanceMatrixOptions {
+  try {
+    return distanceMatrixOptionsSchema.parse(options);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const firstError = error.issues[0];
+      throw new Error(`Validation error: ${firstError.path.join('.')} - ${firstError.message}`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Validate SnapToRoadsOptions
+ */
+export function validateSnapToRoadsOptions(options: unknown): SnapToRoadsOptions {
+  try {
+    return snapToRoadsOptionsSchema.parse(options);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const firstError = error.issues[0];
+      throw new Error(`Validation error: ${firstError.path.join('.')} - ${firstError.message}`);
     }
     throw error;
   }

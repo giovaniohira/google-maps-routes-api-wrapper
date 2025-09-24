@@ -1,6 +1,6 @@
 import { HttpAdapter, HttpRequest, HttpResponse } from '../adapters/http/httpAdapter';
-import { GetRouteOptions, RouteResult, LatLng } from '../types';
-import { validateGetRouteOptions } from '../validation';
+import { GetRouteOptions, RouteResult, LatLng, DistanceMatrixOptions, DistanceMatrixResult, SnapToRoadsOptions, SnapToRoadsResult } from '../types';
+import { validateGetRouteOptions, validateDistanceMatrixOptions, validateSnapToRoadsOptions } from '../validation';
 import { RoutesError } from '../errors';
 import { RetryStrategy, RetryConfig } from './retryStrategy';
 import { RateLimiter, RateLimiterConfig } from './rateLimiter';
@@ -323,6 +323,368 @@ export class RoutesClient {
     async invalidateRoute(opts: GetRouteOptions): Promise<void> {
         if (this.cacheAdapter) {
             const cacheKey = this.generateCacheKey('route', opts);
+            await this.cacheAdapter.del(cacheKey);
+        }
+    }
+
+    /**
+     * Get distance matrix between origins and destinations
+     * @param opts - Distance matrix options including origins, destinations, and optional parameters
+     * @param cacheOptions - Cache options for this request
+     * @returns Promise<DistanceMatrixResult> - The distance matrix result from Google Maps API
+     * @throws RoutesError - For validation errors, API errors, or network issues
+     */
+    async getDistanceMatrix(
+        opts: DistanceMatrixOptions,
+        cacheOptions?: { bypassCache?: boolean; forceRefresh?: boolean; ttlMs?: number }
+    ): Promise<DistanceMatrixResult> {
+        // Validate input options
+        const validatedOptions = validateDistanceMatrixOptions(opts);
+        
+        // Generate cache key
+        const cacheKey = this.generateDistanceMatrixCacheKey(validatedOptions);
+        
+        // Check cache first (unless bypassing)
+        if (this.cacheAdapter && !cacheOptions?.bypassCache && !cacheOptions?.forceRefresh) {
+            const cachedResult = await this.cacheAdapter.get<DistanceMatrixResult>(cacheKey);
+            if (cachedResult) {
+                return cachedResult;
+            }
+        }
+        
+        // Apply rate limiting
+        const rateLimited = await this.rateLimiter.acquire();
+        if (!rateLimited) {
+            throw RoutesError.fromHttpResponse(429, 'Rate limit exceeded. Please try again later.');
+        }
+
+        // Execute with retry strategy
+        const result = await this.retryStrategy.execute(async () => {
+            return this.executeDistanceMatrixRequest(validatedOptions);
+        }, { operation: 'getDistanceMatrix' });
+
+        // Cache the result
+        if (this.cacheAdapter && result) {
+            const ttlMs = cacheOptions?.ttlMs || 300000; // 5 minutes default
+            await this.cacheAdapter.set(cacheKey, result, ttlMs);
+        }
+
+        return result;
+    }
+
+    /**
+     * Snap GPS coordinates to roads
+     * @param opts - Snap to roads options including path and optional parameters
+     * @param cacheOptions - Cache options for this request
+     * @returns Promise<SnapToRoadsResult> - The snap to roads result from Google Maps API
+     * @throws RoutesError - For validation errors, API errors, or network issues
+     */
+    async snapToRoads(
+        opts: SnapToRoadsOptions,
+        cacheOptions?: { bypassCache?: boolean; forceRefresh?: boolean; ttlMs?: number }
+    ): Promise<SnapToRoadsResult> {
+        // Validate input options
+        const validatedOptions = validateSnapToRoadsOptions(opts);
+        
+        // Generate cache key
+        const cacheKey = this.generateSnapToRoadsCacheKey(validatedOptions);
+        
+        // Check cache first (unless bypassing)
+        if (this.cacheAdapter && !cacheOptions?.bypassCache && !cacheOptions?.forceRefresh) {
+            const cachedResult = await this.cacheAdapter.get<SnapToRoadsResult>(cacheKey);
+            if (cachedResult) {
+                return cachedResult;
+            }
+        }
+        
+        // Apply rate limiting
+        const rateLimited = await this.rateLimiter.acquire();
+        if (!rateLimited) {
+            throw RoutesError.fromHttpResponse(429, 'Rate limit exceeded. Please try again later.');
+        }
+
+        // Execute with retry strategy
+        const result = await this.retryStrategy.execute(async () => {
+            return this.executeSnapToRoadsRequest(validatedOptions);
+        }, { operation: 'snapToRoads' });
+
+        // Cache the result
+        if (this.cacheAdapter && result) {
+            const ttlMs = cacheOptions?.ttlMs || 300000; // 5 minutes default
+            await this.cacheAdapter.set(cacheKey, result, ttlMs);
+        }
+
+        return result;
+    }
+
+    /**
+     * Execute the actual distance matrix request
+     */
+    private async executeDistanceMatrixRequest(opts: DistanceMatrixOptions): Promise<DistanceMatrixResult> {
+        try {
+            // Build request URL
+            const url = this.buildDistanceMatrixUrl(opts);
+            
+            // Create HTTP request
+            const req: HttpRequest = {
+                method: 'GET',
+                url,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'google-maps-routes-wrapper/1.0.0'
+                }
+            };
+
+            // Send request with timeout
+            const res = await this.sendRequestWithTimeout(req);
+            
+            // Check for HTTP errors
+            if (res.status >= 400) {
+                throw RoutesError.fromHttpResponse(res.status, 'API request failed', res.body);
+            }
+
+            // Parse and validate response
+            return this.parseDistanceMatrixResponse(res.body);
+            
+        } catch (error) {
+            if (error instanceof RoutesError) {
+                throw error;
+            }
+            
+            // Handle network errors
+            if (error instanceof Error) {
+                if (error.message.includes('timeout')) {
+                    throw RoutesError.timeout(this.timeoutMs);
+                }
+                throw RoutesError.network(error.message, error);
+            }
+            
+            throw RoutesError.network('Unknown error occurred');
+        }
+    }
+
+    /**
+     * Execute the actual snap to roads request
+     */
+    private async executeSnapToRoadsRequest(opts: SnapToRoadsOptions): Promise<SnapToRoadsResult> {
+        try {
+            // Build request URL
+            const url = this.buildSnapToRoadsUrl(opts);
+            
+            // Create HTTP request
+            const req: HttpRequest = {
+                method: 'GET',
+                url,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'google-maps-routes-wrapper/1.0.0'
+                }
+            };
+
+            // Send request with timeout
+            const res = await this.sendRequestWithTimeout(req);
+            
+            // Check for HTTP errors
+            if (res.status >= 400) {
+                throw RoutesError.fromHttpResponse(res.status, 'API request failed', res.body);
+            }
+
+            // Parse and validate response
+            return this.parseSnapToRoadsResponse(res.body);
+            
+        } catch (error) {
+            if (error instanceof RoutesError) {
+                throw error;
+            }
+            
+            // Handle network errors
+            if (error instanceof Error) {
+                if (error.message.includes('timeout')) {
+                    throw RoutesError.timeout(this.timeoutMs);
+                }
+                throw RoutesError.network(error.message, error);
+            }
+            
+            throw RoutesError.network('Unknown error occurred');
+        }
+    }
+
+    /**
+     * Build Google Distance Matrix API URL with query parameters
+     */
+    private buildDistanceMatrixUrl(options: DistanceMatrixOptions): string {
+        const params = new URLSearchParams();
+        
+        // Origins
+        const origins = options.origins.map(origin => this.formatLocation(origin)).join('|');
+        params.append('origins', origins);
+        
+        // Destinations
+        const destinations = options.destinations.map(dest => this.formatLocation(dest)).join('|');
+        params.append('destinations', destinations);
+        
+        // API Key
+        params.append('key', this.apiKey);
+        
+        // Optional parameters
+        if (options.travelMode) {
+            params.append('mode', options.travelMode.toLowerCase());
+        }
+        
+        if (options.units) {
+            params.append('units', options.units);
+        }
+        
+        if (options.departureTime) {
+            const timestamp = options.departureTime instanceof Date 
+                ? Math.floor(options.departureTime.getTime() / 1000)
+                : options.departureTime;
+            params.append('departure_time', timestamp.toString());
+        }
+        
+        if (options.arrivalTime) {
+            const timestamp = options.arrivalTime instanceof Date 
+                ? Math.floor(options.arrivalTime.getTime() / 1000)
+                : options.arrivalTime;
+            params.append('arrival_time', timestamp.toString());
+        }
+        
+        if (options.trafficModel) {
+            params.append('traffic_model', options.trafficModel);
+        }
+        
+        if (options.transitMode) {
+            params.append('transit_mode', options.transitMode);
+        }
+        
+        if (options.transitRoutingPreference) {
+            params.append('transit_routing_preference', options.transitRoutingPreference);
+        }
+        
+        // Avoid parameters
+        const avoidParams: string[] = [];
+        if (options.avoidHighways) avoidParams.push('highways');
+        if (options.avoidTolls) avoidParams.push('tolls');
+        if (options.avoidFerries) avoidParams.push('ferries');
+        
+        if (avoidParams.length > 0) {
+            params.append('avoid', avoidParams.join('|'));
+        }
+
+        return `${this.baseUrl}/distancematrix/json?${params.toString()}`;
+    }
+
+    /**
+     * Build Google Roads API URL with query parameters
+     */
+    private buildSnapToRoadsUrl(options: SnapToRoadsOptions): string {
+        const params = new URLSearchParams();
+        
+        // Path
+        const path = options.path.map(point => `${point.lat},${point.lng}`).join('|');
+        params.append('path', path);
+        
+        // API Key
+        params.append('key', this.apiKey);
+        
+        // Optional parameters
+        if (options.interpolate) {
+            params.append('interpolate', 'true');
+        }
+
+        return `${this.baseUrl}/snapToRoads?${params.toString()}`;
+    }
+
+    /**
+     * Parse and validate Google Distance Matrix API response
+     */
+    private parseDistanceMatrixResponse(body: any): DistanceMatrixResult {
+        if (!body || typeof body !== 'object') {
+            throw RoutesError.validation('Invalid response format from API');
+        }
+
+        if (body.status !== 'OK' && body.status !== 'ZERO_RESULTS') {
+            throw RoutesError.fromHttpResponse(
+                400,
+                body.error_message || `API returned status: ${body.status}`,
+                body
+            );
+        }
+
+        return body as DistanceMatrixResult;
+    }
+
+    /**
+     * Parse and validate Google Roads API response
+     */
+    private parseSnapToRoadsResponse(body: any): SnapToRoadsResult {
+        if (!body || typeof body !== 'object') {
+            throw RoutesError.validation('Invalid response format from API');
+        }
+
+        if (body.status !== 'OK' && body.status !== 'ZERO_RESULTS') {
+            throw RoutesError.fromHttpResponse(
+                400,
+                body.error_message || `API returned status: ${body.status}`,
+                body
+            );
+        }
+
+        return body as SnapToRoadsResult;
+    }
+
+    /**
+     * Generate cache key for distance matrix request
+     */
+    private generateDistanceMatrixCacheKey(options: DistanceMatrixOptions): string {
+        const keyData = {
+            operation: 'distanceMatrix',
+            origins: options.origins,
+            destinations: options.destinations,
+            travelMode: options.travelMode,
+            units: options.units,
+            departureTime: options.departureTime,
+            arrivalTime: options.arrivalTime,
+            trafficModel: options.trafficModel,
+            transitMode: options.transitMode,
+            transitRoutingPreference: options.transitRoutingPreference,
+            avoidHighways: options.avoidHighways,
+            avoidTolls: options.avoidTolls,
+            avoidFerries: options.avoidFerries
+        };
+        
+        return `routes:distanceMatrix:${Buffer.from(JSON.stringify(keyData)).toString('base64')}`;
+    }
+
+    /**
+     * Generate cache key for snap to roads request
+     */
+    private generateSnapToRoadsCacheKey(options: SnapToRoadsOptions): string {
+        const keyData = {
+            operation: 'snapToRoads',
+            path: options.path,
+            interpolate: options.interpolate
+        };
+        
+        return `routes:snapToRoads:${Buffer.from(JSON.stringify(keyData)).toString('base64')}`;
+    }
+
+    /**
+     * Invalidate cache for specific distance matrix request
+     */
+    async invalidateDistanceMatrix(opts: DistanceMatrixOptions): Promise<void> {
+        if (this.cacheAdapter) {
+            const cacheKey = this.generateDistanceMatrixCacheKey(opts);
+            await this.cacheAdapter.del(cacheKey);
+        }
+    }
+
+    /**
+     * Invalidate cache for specific snap to roads request
+     */
+    async invalidateSnapToRoads(opts: SnapToRoadsOptions): Promise<void> {
+        if (this.cacheAdapter) {
+            const cacheKey = this.generateSnapToRoadsCacheKey(opts);
             await this.cacheAdapter.del(cacheKey);
         }
     }
