@@ -1,5 +1,5 @@
 import { HttpAdapter, HttpRequest, HttpResponse } from '../adapters/http/httpAdapter';
-import { GetRouteOptions, RouteResult, LatLng, DistanceMatrixOptions, DistanceMatrixResult, SnapToRoadsOptions, SnapToRoadsResult } from '../types';
+import { GetRouteOptions, RouteResult, LatLng, DistanceMatrixOptions, DistanceMatrixResult, SnapToRoadsOptions, SnapToRoadsResult, Waypoint, Location } from '../types';
 import { validateGetRouteOptions, validateDistanceMatrixOptions, validateSnapToRoadsOptions } from '../validation';
 import { RoutesError } from '../errors';
 import { RetryStrategy, RetryConfig } from './retryStrategy';
@@ -155,7 +155,7 @@ export class RoutesClient {
         
         if (options.waypoints && options.waypoints.length > 0) {
             const waypointStr = options.waypoints
-                .map(wp => this.formatLocation(wp))
+                .map(wp => this.formatLocation(wp as Location))
                 .join('|');
             params.append('waypoints', waypointStr);
         }
@@ -180,11 +180,14 @@ export class RoutesClient {
     }
 
     /**
-     * Format location (string or LatLng) for API request
+     * Format location (string, LatLng, or [lat, lng] array) for API request
      */
-    private formatLocation(location: string | LatLng): string {
+    private formatLocation(location: Location): string {
         if (typeof location === 'string') {
             return location;
+        }
+        if (Array.isArray(location)) {
+            return `${location[0]},${location[1]}`;
         }
         return `${location.lat},${location.lng}`;
     }
