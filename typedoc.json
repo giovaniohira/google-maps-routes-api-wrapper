@@ -1,0 +1,41 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "out": "docs",
+  "name": "Google Maps Routes API Wrapper",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "readme": "README.md",
+  "theme": "default",
+  "sort": ["source-order"],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "categorizeByGroup": true,
+  "defaultCategory": "Other",
+  "categoryOrder": [
+    "Core",
+    "Adapters", 
+    "Types",
+    "Validation",
+    "Errors",
+    "Other"
+  ],
+  "groupOrder": [
+    "Core Classes",
+    "HTTP Adapters",
+    "Cache Adapters", 
+    "Types",
+    "Validation",
+    "Errors"
+  ],
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/tests/**"
+  ]
+}
