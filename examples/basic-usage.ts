@@ -19,7 +19,6 @@ async function basicUsageExample() {
 
   try {
     // Example 1: Simple route between two cities
-    console.log('📍 Example 1: Simple Route');
     const route = await client.getRoute({
       origin: 'New York, NY',
       destination: 'Philadelphia, PA',
@@ -30,7 +29,6 @@ async function basicUsageExample() {
     console.log(`Duration: ${route.routes[0]?.legs[0]?.duration?.text}\n`);
 
     // Example 2: Route with waypoints
-    console.log('📍 Example 2: Route with Waypoints');
     const routeWithWaypoints = await client.getRoute({
       origin: 'New York, NY',
       destination: 'Washington, DC',
@@ -42,7 +40,6 @@ async function basicUsageExample() {
     console.log(`Multi-stop route: ${routeWithWaypoints.routes[0]?.legs.length} legs\n`);
 
     // Example 3: Distance Matrix
-    console.log('📍 Example 3: Distance Matrix');
     const distances = await client.getDistanceMatrix({
       origins: ['New York, NY', 'Boston, MA'],
       destinations: ['Philadelphia, PA', 'Washington, DC']

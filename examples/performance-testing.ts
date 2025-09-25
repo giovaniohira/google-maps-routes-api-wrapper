@@ -5,7 +5,7 @@
  * for the Google Maps Routes API wrapper.
  */
 
-import { RoutesClient, FetchAdapter, InMemoryCacheAdapter } from '../src';
+import { RoutesClient, FetchAdapter, InMemoryCacheAdapter, TravelMode } from '../src';
 
 interface PerformanceMetrics {
   totalRequests: number;
@@ -50,7 +50,7 @@ class PerformanceTester {
     const testRoute = {
       origin: 'New York, NY',
       destination: 'Philadelphia, PA',
-      travelMode: 'DRIVING' as const
+      travelMode: TravelMode.DRIVING as const
     };
 
     const startTime = Date.now();
@@ -85,7 +85,7 @@ class PerformanceTester {
     const testRoutes = Array(concurrency).fill(null).map((_, i) => ({
       origin: `City ${i}, State`,
       destination: `Destination ${i}, State`,
-      travelMode: 'DRIVING' as const
+      travelMode: TravelMode.DRIVING as const
     }));
 
     const startTime = Date.now();
@@ -134,7 +134,7 @@ class PerformanceTester {
     const testRoute = {
       origin: 'San Francisco, CA',
       destination: 'Los Angeles, CA',
-      travelMode: 'DRIVING' as const
+      travelMode: TravelMode.DRIVING as const
     };
 
     // First request (cache miss)
@@ -168,11 +168,11 @@ class PerformanceTester {
     console.log(`🧪 Load Test (${iterations} iterations)\n`);
 
     const testRoutes = [
-      { origin: 'New York, NY', destination: 'Philadelphia, PA', travelMode: 'DRIVING' as const },
-      { origin: 'Los Angeles, CA', destination: 'San Diego, CA', travelMode: 'DRIVING' as const },
-      { origin: 'Chicago, IL', destination: 'Milwaukee, WI', travelMode: 'DRIVING' as const },
-      { origin: 'Miami, FL', destination: 'Orlando, FL', travelMode: 'DRIVING' as const },
-      { origin: 'Seattle, WA', destination: 'Portland, OR', travelMode: 'DRIVING' as const }
+      { origin: 'New York, NY', destination: 'Philadelphia, PA', travelMode: TravelMode.DRIVING as const },
+      { origin: 'Los Angeles, CA', destination: 'San Diego, CA', travelMode: TravelMode.DRIVING as const },
+      { origin: 'Chicago, IL', destination: 'Milwaukee, WI', travelMode: TravelMode.DRIVING as const },
+      { origin: 'Miami, FL', destination: 'Orlando, FL', travelMode: TravelMode.DRIVING as const },
+      { origin: 'Seattle, WA', destination: 'Portland, OR', travelMode: TravelMode.DRIVING as const }
     ];
 
     const startTime = Date.now();
