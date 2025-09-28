@@ -270,6 +270,6 @@ We welcome contributions from the community! See our [Contributing Guide](CONTRI
 
 **NPM Version** ![npm version](https://img.shields.io/npm/v/google-maps-routes-api-wrapper)
 **NPM Downloads** ![npm downloads](https://img.shields.io/npm/dm/google-maps-routes-api-wrapper)
-**Build Status** ![Build Status](https://img.shields.io/github/workflow/status/your-username/google-maps-routes-api-wrapper/CI)
-**Test Coverage** ![Test Coverage](https://img.shields.io/codecov/c/github/your-username/google-maps-routes-api-wrapper)
-**OpenSSF Scorecard** ![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/your-username/google-maps-routes-api-wrapper/badge)
+**Build Status** ![Build Status](https://img.shields.io/github/workflow/status/giovaniohira/google-maps-routes-api-wrapper/CI)
+**Test Coverage** ![Test Coverage](https://img.shields.io/codecov/c/github/giovaniohira/google-maps-routes-api-wrapper)
+**OpenSSF Scorecard** ![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/giovaniohira/google-maps-routes-api-wrapper/badge)
