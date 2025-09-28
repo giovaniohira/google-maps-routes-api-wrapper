@@ -69,7 +69,7 @@ npm install google-maps-routes-api-wrapper
 
 ## Docs & Community
 
-- [API Documentation](docs/) - Complete API reference generated with TypeDoc
+- [API Documentation](https://giovaniohira.github.io/google-maps-routes-api-wrapper/) - Complete API reference generated with TypeDoc
 - [Examples](examples/) - Real-world usage examples and patterns
 - [Templates](templates/) - Ready-to-use templates for popular frameworks
 
@@ -219,12 +219,6 @@ const snappedPoints = await client.snapToRoads({
 
 console.log(`Snapped ${snappedPoints.snappedPoints.length} points to roads`);
 ```
-
-## Contributing
-
-The Google Maps Routes API Wrapper project welcomes all constructive contributions. Contributions take many forms, from code for bug fixes and enhancements, to additions and fixes to documentation, additional tests, triaging incoming pull requests and issues, and more!
-
-See the Contributing Guide for more technical details on contributing.
 
 ## Security Issues
 
