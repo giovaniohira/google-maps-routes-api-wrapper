@@ -1,26 +1,52 @@
 {
   "name": "google-maps-routes-api-wrapper",
   "version": "1.0.0",
-  "description": "A complete wrapper for Google Maps Routes API.",
+  "description": "A complete wrapper for Google Maps Routes API with TypeScript support, caching, rate limiting, and retry strategies.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf dist",
+    "clean": "rmdir /s /q dist 2>nul || echo \"dist directory cleaned\"",
     "docs": "typedoc",
     "docs:serve": "typedoc --serve",
-    "lint": "eslint . --ext .ts",
-    "test": "jest --passWithNoTests --runInBand"
+    "lint": "eslint src --ext .ts",
+    "test": "jest --passWithNoTests --runInBand",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "google",
     "maps",
     "routes",
     "api",
-    "wrapper"
+    "wrapper",
+    "typescript",
+    "directions",
+    "distance-matrix",
+    "roads-api",
+    "caching",
+    "rate-limiting"
   ],
-  "author": "Giovani Ohira",
+  "author": {
+    "name": "Giovani Ohira",
+    "email": "giovani.ohira@example.com"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/giovaniohira/google-maps-routes-api-wrapper.git"
+  },
+  "homepage": "https://github.com/giovaniohira/google-maps-routes-api-wrapper#readme",
+  "bugs": {
+    "url": "https://github.com/giovaniohira/google-maps-routes-api-wrapper/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.5.2",
@@ -28,19 +54,18 @@
     "@typescript-eslint/eslint-plugin": "^8.44.0",
     "@typescript-eslint/parser": "^8.44.0",
     "eslint": "^9.36.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.32.0",
     "jest": "^30.1.3",
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.4",
     "typedoc": "^0.28.13",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.1"
   },
   "dependencies": {
     "node-fetch": "^2.7.0",
-    "zod": "3.22.4"
+    "zod": "^3.22.4"
   },
   "peerDependencies": {
-    "zod": "3.22.4"
+    "zod": "^3.22.4"
   }
 }
