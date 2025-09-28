@@ -6,8 +6,8 @@
   "excludePrivate": true,
   "excludeProtected": true,
   "excludeExternals": true,
-  "readme": "README.md",
   "theme": "default",
+  "readme": "none",
   "sort": ["source-order"],
   "navigation": {
     "includeCategories": true,
