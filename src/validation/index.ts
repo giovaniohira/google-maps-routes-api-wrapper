@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LatLng, TravelMode, GetRouteOptions, DistanceMatrixOptions, SnapToRoadsOptions, Waypoint, Location } from '../types';
+import { LatLng, TravelMode, GetRouteOptions, DistanceMatrixOptions, SnapToRoadsOptions } from '../types';
 
 /**
  * Schema for LatLng coordinates

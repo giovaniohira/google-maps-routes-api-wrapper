@@ -45,10 +45,9 @@ export class RetryStrategy {
    * @returns Promise with the result of the function
    */
   async execute<T>(
-    fn: () => Promise<T>,
-    context: { operation: string; requestId?: string } = { operation: 'unknown' }
+    fn: () => Promise<T>
   ): Promise<T> {
-    let lastError: Error;
+    let lastError: Error | undefined;
     let attempt = 0;
 
     while (attempt <= this.config.maxRetries) {
@@ -70,18 +69,13 @@ export class RetryStrategy {
 
         // Calculate delay for next retry
         const delay = this.calculateDelay(attempt);
-        
-        console.warn(
-          `Retry attempt ${attempt}/${this.config.maxRetries} for ${context.operation} after ${delay}ms`,
-          { error: lastError.message, requestId: context.requestId }
-        );
 
         // Wait before next retry
         await this.delay(delay);
       }
     }
 
-    throw lastError!;
+    throw lastError || new Error('Unknown error occurred during retry execution');
   }
 
   /**

@@ -6,7 +6,8 @@ export * from './types';
 
 // HTTP Adapters
 export { FetchAdapter } from './adapters/http/fetchAdapter';
-export { HttpAdapter, HttpRequest, HttpResponse } from './adapters/http/httpAdapter';
+export { BrowserFetchAdapter } from './adapters/http/browserFetchAdapter';
+export type { HttpAdapter, HttpRequest, HttpResponse } from './adapters/http/httpAdapter';
 
 // Errors
 export { RoutesError } from './errors';
@@ -15,9 +16,11 @@ export { RoutesError } from './errors';
 export * from './validation';
 
 // Retry and Rate Limiting
-export { RetryStrategy, RetryConfig, DEFAULT_RETRY_CONFIG } from './core/retryStrategy';
-export { RateLimiter, RateLimiterConfig, DEFAULT_RATE_LIMITER_CONFIG, MultiRateLimiter } from './core/rateLimiter';
+export { RetryStrategy, DEFAULT_RETRY_CONFIG } from './core/retryStrategy';
+export type { RetryConfig } from './core/retryStrategy';
+export { RateLimiter, DEFAULT_RATE_LIMITER_CONFIG, MultiRateLimiter } from './core/rateLimiter';
+export type { RateLimiterConfig } from './core/rateLimiter';
 
 // Cache Adapters
-export { CacheAdapter, CacheEntry, CacheStats, CacheConfig } from './adapters/cache/cacheAdapter';
+export type { CacheAdapter, CacheEntry, CacheStats, CacheConfig } from './adapters/cache/cacheAdapter';
 export { InMemoryCacheAdapter, DEFAULT_CACHE_CONFIG } from './adapters/cache/inMemoryCacheAdapter';

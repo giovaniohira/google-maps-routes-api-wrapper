@@ -1,10 +1,10 @@
 import { HttpAdapter, HttpRequest, HttpResponse } from '../adapters/http/httpAdapter';
-import { GetRouteOptions, RouteResult, LatLng, DistanceMatrixOptions, DistanceMatrixResult, SnapToRoadsOptions, SnapToRoadsResult, Waypoint, Location } from '../types';
+import { GetRouteOptions, RouteResult, DistanceMatrixOptions, DistanceMatrixResult, SnapToRoadsOptions, SnapToRoadsResult, Location } from '../types';
 import { validateGetRouteOptions, validateDistanceMatrixOptions, validateSnapToRoadsOptions } from '../validation';
 import { RoutesError } from '../errors';
 import { RetryStrategy, RetryConfig } from './retryStrategy';
 import { RateLimiter, RateLimiterConfig } from './rateLimiter';
-import { CacheAdapter, CacheConfig } from '../adapters/cache/cacheAdapter';
+import { CacheAdapter } from '../adapters/cache/cacheAdapter';
 
 export class RoutesClient {
     private httpAdapter: HttpAdapter;
@@ -76,7 +76,7 @@ export class RoutesClient {
         // Execute with retry strategy
         const result = await this.retryStrategy.execute(async () => {
             return this.executeRouteRequest(validatedOptions);
-        }, { operation: 'getRoute' });
+        });
 
         // Cache the result
         if (this.cacheAdapter && result) {
@@ -284,7 +284,19 @@ export class RoutesClient {
             optimizeWaypoints: options.optimizeWaypoints
         };
         
-        return `routes:${operation}:${Buffer.from(JSON.stringify(keyData)).toString('base64')}`;
+        // Create a more efficient cache key using simple string concatenation
+        const keyParts = [
+            operation,
+            String(keyData.origin),
+            String(keyData.destination),
+            keyData.travelMode || '',
+            keyData.waypoints ? keyData.waypoints.join(',') : '',
+            keyData.avoidHighways ? '1' : '0',
+            keyData.avoidTolls ? '1' : '0',
+            keyData.avoidFerries ? '1' : '0',
+            keyData.optimizeWaypoints ? '1' : '0'
+        ];
+        return `routes:${keyParts.join(':')}`;
     }
 
     /**
@@ -364,7 +376,7 @@ export class RoutesClient {
         // Execute with retry strategy
         const result = await this.retryStrategy.execute(async () => {
             return this.executeDistanceMatrixRequest(validatedOptions);
-        }, { operation: 'getDistanceMatrix' });
+        });
 
         // Cache the result
         if (this.cacheAdapter && result) {
@@ -409,7 +421,7 @@ export class RoutesClient {
         // Execute with retry strategy
         const result = await this.retryStrategy.execute(async () => {
             return this.executeSnapToRoadsRequest(validatedOptions);
-        }, { operation: 'snapToRoads' });
+        });
 
         // Cache the result
         if (this.cacheAdapter && result) {
@@ -656,7 +668,23 @@ export class RoutesClient {
             avoidFerries: options.avoidFerries
         };
         
-        return `routes:distanceMatrix:${Buffer.from(JSON.stringify(keyData)).toString('base64')}`;
+        // Create a more efficient cache key using simple string concatenation
+        const keyParts = [
+            'distanceMatrix',
+            keyData.origins.join('|'),
+            keyData.destinations.join('|'),
+            keyData.travelMode || '',
+            keyData.units || '',
+            keyData.departureTime ? String(keyData.departureTime) : '',
+            keyData.arrivalTime ? String(keyData.arrivalTime) : '',
+            keyData.trafficModel || '',
+            keyData.transitMode || '',
+            keyData.transitRoutingPreference || '',
+            keyData.avoidHighways ? '1' : '0',
+            keyData.avoidTolls ? '1' : '0',
+            keyData.avoidFerries ? '1' : '0'
+        ];
+        return `routes:${keyParts.join(':')}`;
     }
 
     /**
@@ -669,7 +697,14 @@ export class RoutesClient {
             interpolate: options.interpolate
         };
         
-        return `routes:snapToRoads:${Buffer.from(JSON.stringify(keyData)).toString('base64')}`;
+        // Create a more efficient cache key using simple string concatenation
+        const pathString = keyData.path.map(p => `${p.lat},${p.lng}`).join('|');
+        const keyParts = [
+            'snapToRoads',
+            pathString,
+            keyData.interpolate ? '1' : '0'
+        ];
+        return `routes:${keyParts.join(':')}`;
     }
 
     /**

@@ -166,7 +166,11 @@ export class MultiRateLimiter {
     if (!this.limiters.has(key)) {
       this.limiters.set(key, new RateLimiter(config));
     }
-    return this.limiters.get(key)!;
+    const limiter = this.limiters.get(key);
+    if (!limiter) {
+      throw new Error(`Limiter not found for key: ${key}`);
+    }
+    return limiter;
   }
 
   /**
